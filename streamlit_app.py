@@ -1,5 +1,5 @@
 """
-FRADSCR · MajiAlert — Solar Groundwater & Drought Early Warning System
+FRADSCR — Solar Groundwater & Drought Early Warning System
 =====================================================================
 Production-grade Streamlit application for drought early warning,
 climate teleconnection forecasting, and solar borehole dispatch in
@@ -39,7 +39,7 @@ except ImportError:
 # Streamlit Page Configuration
 # =============================================================================
 st.set_page_config(
-    page_title="MajiAlert · Drought Early Warning System",
+    page_title="FRADSCR · Drought Early Warning System",
     page_icon="💧",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -169,7 +169,7 @@ PRESETS = {
 # Sidebar Controls
 # =============================================================================
 with st.sidebar:
-    st.markdown("### 💧 MajiAlert Controls")
+    st.markdown("### 💧 FRADSCR Controls")
     st.caption("FRADSCR Climate & Groundwater Teleconnections")
 
     selected_preset = st.selectbox("Select Location Preset", list(PRESETS.keys()))
@@ -207,7 +207,7 @@ with st.sidebar:
 # =============================================================================
 # Main Header Banner
 # =============================================================================
-st.markdown("<div class=\"main-header\">FRADSCR · MajiAlert Early Warning System</div>", unsafe_allow_html=True)
+st.markdown("<div class=\"main-header\">FRADSCR · Drought Early Warning System</div>", unsafe_allow_html=True)
 st.markdown("<div class=\"sub-header\">Decadal Groundwater Deficit Forecasting & Solar Borehole Pumping Advisory · Horn of Africa</div>", unsafe_allow_html=True)
 
 # Run Active Prediction
@@ -463,7 +463,7 @@ with tab2:
     st.download_button(
         label="📥 Export 2025–2035 Forecast Table (CSV)",
         data=csv_data,
-        file_name=f"maji_alert_decadal_forecast_{latitude}_{longitude}.csv",
+        file_name=f"fradscr_decadal_forecast_{latitude}_{longitude}.csv",
         mime="text/csv",
     )
 
@@ -570,4 +570,4 @@ console.log("Combined Risk:", result.combined_drought_risk);
 
 # Footer
 st.markdown("---")
-st.caption("FRADSCR · MajiAlert © 2026 · Powered by Paleoclimatology & Solar Teleconnection AI")
+st.caption("FRADSCR © 2026 · Powered by Paleoclimatology & Solar Teleconnection AI")

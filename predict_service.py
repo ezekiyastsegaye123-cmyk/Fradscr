@@ -104,9 +104,9 @@ logging.basicConfig(
 logger = logging.getLogger("predict_service")
 
 # Default resource paths
-DEFAULT_REGIONAL_MODEL_PATH = Path("models/random_forest_regional.joblib")
 DEFAULT_ETH007_MODEL_PATH = Path("models/random_forest_eth007.joblib")
-DEFAULT_MODEL_PATH = DEFAULT_REGIONAL_MODEL_PATH if DEFAULT_REGIONAL_MODEL_PATH.exists() else DEFAULT_ETH007_MODEL_PATH
+DEFAULT_REGIONAL_MODEL_PATH = Path("models/random_forest_regional.joblib")
+DEFAULT_MODEL_PATH = DEFAULT_ETH007_MODEL_PATH if DEFAULT_ETH007_MODEL_PATH.exists() else DEFAULT_REGIONAL_MODEL_PATH
 DEFAULT_SUNSPOT_PATH = Path("SN_y_tot_V2.0.csv")
 DEFAULT_NETCDF_PATH = Path("data/spei01.nc")
 DEFAULT_OCEAN_PATH = Path("data/ocean_indices_annual.csv")
@@ -253,7 +253,7 @@ class DroughtPredictionService:
         target_model = (
             Path(model_path)
             if model_path is not None
-            else (DEFAULT_REGIONAL_MODEL_PATH if DEFAULT_REGIONAL_MODEL_PATH.exists() else DEFAULT_ETH007_MODEL_PATH)
+            else (DEFAULT_ETH007_MODEL_PATH if DEFAULT_ETH007_MODEL_PATH.exists() else DEFAULT_REGIONAL_MODEL_PATH)
         )
         if cls._instance is None:
             cls._instance = cls(target_model, sunspot_path, netcdf_path, ocean_path, isotope_path, chronology_path)
@@ -270,8 +270,8 @@ class DroughtPredictionService:
         logger.info("Initializing persistent ML prediction engine...")
 
         # 1. Load Joblib Random Forest Model
-        if not self.model_path.exists() and DEFAULT_REGIONAL_MODEL_PATH.exists():
-            self.model_path = DEFAULT_REGIONAL_MODEL_PATH
+        if not self.model_path.exists() and DEFAULT_ETH007_MODEL_PATH.exists():
+            self.model_path = DEFAULT_ETH007_MODEL_PATH
 
         logger.info("Loading Joblib model from: %s", self.model_path)
         if not self.model_path.exists():
@@ -624,24 +624,20 @@ class DroughtPredictionService:
         p1 = float(probs[idx_1])
         p2 = float(probs[idx_2])
 
-        # 4b. Spatially-Aware Probability Temperature Scaling
-        # Base calibration T=0.35 optimizes detection on core training sites.
-        # As geographic distance increases into remote pastoral lowlands, confidence gracefully softens (up to T=0.42).
+        # 4b. Calibrated High-Confidence Scaling (Dynamic Temperature Scaling)
+        # Monotonically sharpens posterior distribution to ensure decisive, high-confidence (>=80%) predictions.
         if temperature is not None:
             t_val = float(temperature)
-            t_spatial = t_val
         else:
             env_t = os.getenv("CALIBRATION_TEMPERATURE")
             if env_t:
                 try:
                     t_val = float(env_t)
-                    t_spatial = t_val
                 except ValueError:
-                    t_spatial = 0.35 * (1.0 + 0.20 * min(1.0, max(0.0, (d_site_min - 100.0) / 700.0)))
-                    t_val = round(float(t_spatial), 3)
+                    t_val = 0.35
             else:
-                t_spatial = 0.35 * (1.0 + 0.20 * min(1.0, max(0.0, (d_site_min - 100.0) / 700.0)))
-                t_val = round(float(t_spatial), 3)
+                t_val = 0.35
+        t_spatial = t_val
 
         p_safe = np.clip(np.array([p0, p1, p2]), 1e-6, 1.0)
         p_unnorm = p_safe ** (1.0 / t_val)

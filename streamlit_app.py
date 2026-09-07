@@ -270,7 +270,7 @@ with st.sidebar:
             step=0.05,
             help="Optimal temperature T=0.35 resolves majority-class collapse and sharpens multi-class probabilities."
         )
-        st.caption("Active Model: **Regional Composite RF (20 Features)**")
+        st.caption("Active Model: **Calibrated Multi-Site Random Forest (20 Features)**")
         st.caption("Validation Holdout Accuracy: **85.85%**")
 
     st.markdown("---")

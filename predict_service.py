@@ -652,8 +652,13 @@ class DroughtPredictionService:
 
 
 # =============================================================================
-# Standalone Functional Entrypoint (Backward Compatibility)
+# Standalone Functional Entrypoints (Backward Compatibility & Integration)
 # =============================================================================
+
+def get_engine() -> DroughtPredictionService:
+    """Return or initialize the singleton ML prediction service engine."""
+    return DroughtPredictionService.get_instance()
+
 
 def predict_drought(
     latitude: float,

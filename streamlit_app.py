@@ -28,7 +28,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from predict_service import get_engine, predict_drought, SEVERITY_LABELS
+try:
+    from predict_service import get_engine, predict_drought, SEVERITY_LABELS, DroughtPredictionService
+except ImportError:
+    from predict_service import predict_drought, SEVERITY_LABELS, DroughtPredictionService
+    def get_engine():
+        return DroughtPredictionService.get_instance()
 
 # =============================================================================
 # Streamlit Page Configuration

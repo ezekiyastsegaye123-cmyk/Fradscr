@@ -21,7 +21,14 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+import requests
 import streamlit as st
+
+try:
+    from streamlit_js_eval import get_geolocation
+    HAS_GEOLOCATION = True
+except ImportError:
+    HAS_GEOLOCATION = False
 
 # Ensure project root in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -165,22 +172,89 @@ PRESETS = {
 }
 
 
+# Session State Initialization for Geolocation and Interactive Calculation
+if "input_lat" not in st.session_state:
+    st.session_state.input_lat = 4.88
+if "input_lon" not in st.session_state:
+    st.session_state.input_lon = 38.08
+if "location_status" not in st.session_state:
+    st.session_state.location_status = None
+if "request_gps" not in st.session_state:
+    st.session_state.request_gps = False
+
+def on_preset_change():
+    chosen = st.session_state.get("preset_selector")
+    if chosen in PRESETS and PRESETS[chosen] is not None:
+        p_lat, p_lon = PRESETS[chosen]
+        st.session_state.input_lat = p_lat
+        st.session_state.input_lon = p_lon
+        st.session_state.location_status = f"📍 Preset selected: {chosen.split('(')[0].strip()}"
+
+
 # =============================================================================
 # Sidebar Controls
 # =============================================================================
 with st.sidebar:
     st.markdown("### 💧 FRADSCR Controls")
-    st.caption("FRADSCR Climate & Groundwater Teleconnections")
+    st.caption("Climate & Paleoclimate Teleconnection Forecaster")
 
-    selected_preset = st.selectbox("Select Location Preset", list(PRESETS.keys()))
+    # Geolocation Controls
+    st.markdown("##### 📍 Location Selection")
+    col_geo1, col_geo2 = st.columns(2)
+    with col_geo1:
+        if st.button("📍 Device GPS", use_container_width=True, help="Detect exact GPS coordinates via browser HTML5 geolocation."):
+            st.session_state.request_gps = True
+    with col_geo2:
+        if st.button("🌐 Detect IP", use_container_width=True, help="Detect approximate location via network IP."):
+            try:
+                r = requests.get("https://freeipapi.com/api/json", timeout=3)
+                if r.status_code == 200:
+                    data = r.json()
+                    ip_lat = float(data.get("latitude", 0.0))
+                    ip_lon = float(data.get("longitude", 0.0))
+                    city = data.get("cityName", "Current Network")
+                    if ip_lat != 0.0 or ip_lon != 0.0:
+                        st.session_state.input_lat = round(ip_lat, 4)
+                        st.session_state.input_lon = round(ip_lon, 4)
+                        st.session_state.location_status = f"🌐 Network IP Located: {city} ({ip_lat:.2f}° N, {ip_lon:.2f}° E)"
+                        st.rerun()
+            except Exception as e:
+                st.session_state.location_status = f"⚠️ IP detection unavailable: {e}"
 
-    if PRESETS[selected_preset] is not None:
-        default_lat, default_lon = PRESETS[selected_preset]
-    else:
-        default_lat, default_lon = 4.88, 38.08
+    if st.session_state.get("request_gps", False):
+        if HAS_GEOLOCATION:
+            loc = get_geolocation(component_key="device_geo_component")
+            if loc:
+                if "coords" in loc:
+                    user_lat = round(loc["coords"]["latitude"], 4)
+                    user_lon = round(loc["coords"]["longitude"], 4)
+                    st.session_state.input_lat = user_lat
+                    st.session_state.input_lon = user_lon
+                    st.session_state.location_status = f"📍 Device GPS Detected: {user_lat:.4f}° N, {user_lon:.4f}° E"
+                    st.session_state.request_gps = False
+                    st.rerun()
+                elif "error" in loc:
+                    err_msg = loc["error"].get("message", "Permission denied or unavailable.")
+                    st.session_state.location_status = f"⚠️ GPS notice: {err_msg}"
+                    st.session_state.request_gps = False
+            else:
+                st.caption("⏳ Querying GPS... Please allow location access in your browser prompt.")
+        else:
+            st.session_state.location_status = "⚠️ Geolocation module unavailable."
+            st.session_state.request_gps = False
 
-    latitude = st.number_input("Latitude (°N)", min_value=-90.0, max_value=90.0, value=default_lat, step=0.01, format="%.2f")
-    longitude = st.number_input("Longitude (°E)", min_value=-180.0, max_value=180.0, value=default_lon, step=0.01, format="%.2f")
+    selected_preset = st.selectbox(
+        "Regional Station Presets",
+        list(PRESETS.keys()),
+        key="preset_selector",
+        on_change=on_preset_change
+    )
+
+    latitude = st.number_input("Latitude (°N)", min_value=-90.0, max_value=90.0, step=0.01, format="%.4f", key="input_lat")
+    longitude = st.number_input("Longitude (°E)", min_value=-180.0, max_value=180.0, step=0.01, format="%.4f", key="input_lon")
+
+    if st.session_state.get("location_status"):
+        st.caption(st.session_state.location_status)
 
     st.markdown("---")
     st.markdown("#### ⏳ Forecast Horizon")
@@ -200,8 +274,59 @@ with st.sidebar:
         st.caption("Validation Holdout Accuracy: **85.85%**")
 
     st.markdown("---")
-    st.markdown("##### 📍 Active Target")
-    st.code(f"Lat: {latitude:.2f}° N\nLon: {longitude:.2f}° E\nYear: {target_year}\nT: {calib_temp}", language="yaml")
+    # Manual Calculate Forecast Button
+    calc_clicked = st.button(
+        "⚡ Calculate Drought Forecast",
+        type="primary",
+        use_container_width=True,
+        help="Execute model inference and update all charts, risk metrics, and borehole schedules."
+    )
+
+    # Initialize active calculation cache if not set
+    if "active_calc" not in st.session_state:
+        init_pred = get_cached_prediction(st.session_state.input_lat, st.session_state.input_lon, target_year, calib_temp)
+        init_decadal = compute_decadal_trajectory(st.session_state.input_lat, st.session_state.input_lon, calib_temp)
+        st.session_state.active_calc = {
+            "latitude": st.session_state.input_lat,
+            "longitude": st.session_state.input_lon,
+            "target_year": target_year,
+            "calib_temp": calib_temp,
+            "pred": init_pred,
+            "decadal": init_decadal
+        }
+
+    if calc_clicked:
+        with st.spinner("Computing drought teleconnections & decadal trajectory..."):
+            new_pred = get_cached_prediction(latitude, longitude, target_year, calib_temp)
+            new_decadal = compute_decadal_trajectory(latitude, longitude, calib_temp)
+            st.session_state.active_calc = {
+                "latitude": latitude,
+                "longitude": longitude,
+                "target_year": target_year,
+                "calib_temp": calib_temp,
+                "pred": new_pred,
+                "decadal": new_decadal
+            }
+            st.success("✅ Forecast recalculated successfully!")
+
+    # Check for uncalculated changes
+    act_lat = st.session_state.active_calc["latitude"]
+    act_lon = st.session_state.active_calc["longitude"]
+    act_yr = st.session_state.active_calc["target_year"]
+    act_temp = st.session_state.active_calc["calib_temp"]
+
+    is_modified = (
+        abs(latitude - act_lat) > 1e-4 or
+        abs(longitude - act_lon) > 1e-4 or
+        target_year != act_yr or
+        abs(calib_temp - act_temp) > 1e-4
+    )
+
+    if is_modified:
+        st.warning("⚠️ Parameters modified! Click **⚡ Calculate Drought Forecast** above to apply.")
+
+    st.markdown("##### 📍 Active Target (Calculated)")
+    st.code(f"Lat: {act_lat:.4f}° N\nLon: {act_lon:.4f}° E\nYear: {act_yr}\nT: {act_temp:.2f}", language="yaml")
 
 
 # =============================================================================
@@ -210,8 +335,16 @@ with st.sidebar:
 st.markdown("<div class=\"main-header\">FRADSCR · Drought Early Warning System</div>", unsafe_allow_html=True)
 st.markdown("<div class=\"sub-header\">Decadal Groundwater Deficit Forecasting & Solar Borehole Pumping Advisory · Horn of Africa</div>", unsafe_allow_html=True)
 
-# Run Active Prediction
-pred = get_cached_prediction(latitude, longitude, target_year, calib_temp)
+# Active calculated parameters for application state
+latitude = st.session_state.active_calc["latitude"]
+longitude = st.session_state.active_calc["longitude"]
+target_year = st.session_state.active_calc["target_year"]
+calib_temp = st.session_state.active_calc["calib_temp"]
+
+# Active Prediction & Decadal Cache
+pred = st.session_state.active_calc["pred"]
+df_decadal = st.session_state.active_calc["decadal"]
+
 cls = pred["predicted_drought_class"]
 severity = pred["severity_label"]
 probs = pred["confidence_probabilities"]
@@ -414,9 +547,11 @@ with tab1:
 # =============================================================================
 with tab2:
     st.subheader("Schwabe 11-Year Solar-Cycle Trajectory (2025–2035)")
-    st.caption("Forward multi-year projection coupling tree-ring biological growth memory, solar irradiance teleconnection, and equatorial oceanic indices.")
-
-    df_decadal = compute_decadal_trajectory(latitude, longitude, calib_temp)
+    # Use cached decadal projection computed upon clicking Calculate
+    if "decadal" in st.session_state.get("active_calc", {}):
+        df_decadal = st.session_state.active_calc["decadal"]
+    else:
+        df_decadal = compute_decadal_trajectory(latitude, longitude, calib_temp)
 
     # Plot Decadal Forward Projection
     fig_decadal = go.Figure()
@@ -529,8 +664,35 @@ with tab4:
     st.subheader("REST API & Remote Dispatch Integration")
     st.caption("FRADSCR provides microservice REST endpoints for telemetry ingestion, SCADA controllers, and IoT gateways.")
 
+    st.info("""
+    💡 **Zero Localhost Dependency — In-Memory Engine Architecture**:
+    - **Self-Contained ML Dashboard**: This Streamlit application runs the FRADSCR paleoclimate Random Forest model **directly in-memory** using Python. It does **not** connect to `127.0.0.1:8000` or require any local server to calculate forecasts.
+    - **Remote FastAPI Microservice**: The REST API endpoints and code samples below are intended for external software developers, IoT borehole microcontrollers (e.g., ESP32 / Arduino / Raspberry Pi), or mobile apps connecting to a deployed **FastAPI** backend service (`predict_service.py`).
+    """)
+
+    st.markdown("#### Configure Integration Endpoint")
+    col_api1, col_api2 = st.columns([3, 1])
+    with col_api1:
+        api_base_url = st.text_input(
+            "FastAPI Base Endpoint URL",
+            value=os.getenv("FRADSCR_API_URL", "https://fradscr-api.onrender.com"),
+            help="Configure your public cloud-hosted FastAPI backend URL (e.g. Render, Railway, AWS, or http://127.0.0.1:8000 for local development)."
+        ).rstrip("/")
+    with col_api2:
+        st.write("")
+        st.write("")
+        if st.button("🔗 Ping Health", use_container_width=True, help="Test endpoint connectivity via /health"):
+            try:
+                res = requests.get(f"{api_base_url}/health", timeout=3)
+                if res.status_code == 200:
+                    st.success(f"Online ({res.status_code})")
+                else:
+                    st.warning(f"Status: {res.status_code}")
+            except Exception as e:
+                st.error(f"Unreachable: {str(e)[:30]}")
+
     st.markdown("#### Sample Prediction Query")
-    query_url = f"http://127.0.0.1:8000/predict?latitude={latitude}&longitude={longitude}&year={target_year}&temperature={calib_temp}"
+    query_url = f"{api_base_url}/predict?latitude={latitude}&longitude={longitude}&year={target_year}&temperature={calib_temp}"
     st.code(f"GET {query_url}", language="http")
 
     snippet_tab1, snippet_tab2, snippet_tab3 = st.tabs(["cURL", "Python", "JavaScript"])
@@ -542,7 +704,7 @@ with tab4:
         st.code(f"""import requests
 
 response = requests.get(
-    "http://127.0.0.1:8000/predict",
+    "{api_base_url}/predict",
     params={{
         "latitude": {latitude},
         "longitude": {longitude},
@@ -557,7 +719,7 @@ print("Combined Risk:", f"{{data['combined_drought_risk']*100:.1f}}%")
 
     with snippet_tab3:
         st.code(f"""const response = await fetch(
-  "http://127.0.0.1:8000/predict?latitude={latitude}&longitude={longitude}&year={target_year}&temperature={calib_temp}"
+  "{query_url}"
 );
 const result = await response.json();
 console.log("Severity:", result.severity_label);

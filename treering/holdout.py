@@ -248,8 +248,24 @@ def evaluate_geographic_holdout(
     df_sun = df_sun.dropna(subset=["year", "sunspot"]).drop_duplicates("year").sort_values("year").reset_index(drop=True)
 
     # 4. Extract Debrebirkan SPEI
-    debre_spei_res = extract_annual_spei(netcdf_path, lat=9.63, lon=39.53)
-    df_debre_spei = debre_spei_res.annual_df
+    nc_p = Path(netcdf_path) if netcdf_path else None
+    if nc_p and nc_p.exists():
+        debre_spei_res = extract_annual_spei(nc_p, lat=9.63, lon=39.53)
+        df_debre_spei = debre_spei_res.annual_df
+        grid_lat = debre_spei_res.grid_metadata.selected_lat
+        grid_lon = debre_spei_res.grid_metadata.selected_lon
+        grid_dist = debre_spei_res.grid_metadata.spatial_distance_km
+    else:
+        csv_candidates = [
+            Path("results/spei_debrebirkan.csv"),
+            Path(__file__).resolve().parent.parent / "results" / "spei_debrebirkan.csv",
+        ]
+        csv_found = next((p for p in csv_candidates if p.exists()), None)
+        if csv_found:
+            df_debre_spei = pd.read_csv(csv_found)
+            grid_lat, grid_lon, grid_dist = 9.75, 39.75, 27.56
+        else:
+            raise FileNotFoundError(f"Neither NetCDF ({netcdf_path}) nor pre-extracted Debrebirkan SPEI CSV found.")
 
     # 4b. Load Ocean Indices if available
     df_ocean = None
@@ -337,9 +353,9 @@ def evaluate_geographic_holdout(
         "holdout_site": "Debrebirkan Selassie (eth001)",
         "holdout_coordinates": {"latitude": 9.63, "longitude": 39.53},
         "selected_grid_cell": {
-            "latitude": debre_spei_res.grid_metadata.selected_lat,
-            "longitude": debre_spei_res.grid_metadata.selected_lon,
-            "distance_km": debre_spei_res.grid_metadata.spatial_distance_km,
+            "latitude": grid_lat,
+            "longitude": grid_lon,
+            "distance_km": grid_dist,
         },
         "holdout_period": [int(df_holdout["year"].min()), int(df_holdout["year"].max())],
         "n_holdout_samples": len(df_holdout),
@@ -714,8 +730,24 @@ def evaluate_regional_holdout(
     df_sun = df_sun.dropna(subset=["year", "sunspot"]).drop_duplicates("year").sort_values("year").reset_index(drop=True)
 
     # 4. Extract Debrebirkan SPEI
-    debre_spei_res = extract_annual_spei(netcdf_path, lat=9.63, lon=39.53)
-    df_debre_spei = debre_spei_res.annual_df
+    nc_p = Path(netcdf_path) if netcdf_path else None
+    if nc_p and nc_p.exists():
+        debre_spei_res = extract_annual_spei(nc_p, lat=9.63, lon=39.53)
+        df_debre_spei = debre_spei_res.annual_df
+        grid_lat = debre_spei_res.grid_metadata.selected_lat
+        grid_lon = debre_spei_res.grid_metadata.selected_lon
+        grid_dist = debre_spei_res.grid_metadata.spatial_distance_km
+    else:
+        csv_candidates = [
+            Path("results/spei_debrebirkan.csv"),
+            Path(__file__).resolve().parent.parent / "results" / "spei_debrebirkan.csv",
+        ]
+        csv_found = next((p for p in csv_candidates if p.exists()), None)
+        if csv_found:
+            df_debre_spei = pd.read_csv(csv_found)
+            grid_lat, grid_lon, grid_dist = 9.75, 39.75, 27.56
+        else:
+            raise FileNotFoundError(f"Neither NetCDF ({netcdf_path}) nor pre-extracted Debrebirkan SPEI CSV found.")
 
     # 4b. Load Ocean Indices if available
     df_ocean = None
@@ -802,9 +834,9 @@ def evaluate_regional_holdout(
         "holdout_site": "Debrebirkan Selassie (eth001)",
         "holdout_coordinates": {"latitude": 9.63, "longitude": 39.53},
         "selected_grid_cell": {
-            "latitude": debre_spei_res.grid_metadata.selected_lat,
-            "longitude": debre_spei_res.grid_metadata.selected_lon,
-            "distance_km": debre_spei_res.grid_metadata.spatial_distance_km,
+            "latitude": grid_lat,
+            "longitude": grid_lon,
+            "distance_km": grid_dist,
         },
         "holdout_period": [int(df_holdout["year"].min()), int(df_holdout["year"].max())],
         "n_holdout_samples": len(df_holdout),

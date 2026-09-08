@@ -18,7 +18,10 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
-import xarray as xr
+try:
+    import xarray as xr
+except ImportError:
+    xr = None
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +217,8 @@ def load_netcdf(input_path: Union[str, Path]) -> xr.Dataset:
     SPEIFileError
         If file does not exist, is not readable, or is not a valid NetCDF.
     """
+    if xr is None:
+        raise SPEIFileError("The 'xarray' package is required for NetCDF operations but is not installed. Please install it with: pip install xarray netCDF4")
     path = Path(input_path)
     if not path.exists():
         raise SPEIFileError(f"Input NetCDF file does not exist: {path.resolve()}")
@@ -560,7 +565,7 @@ def aggregate_annual_spei(
     SPEIAggregationError
         If aggregation fails or no valid complete years are available.
     """
-    if isinstance(da_or_series, xr.DataArray):
+    if xr is not None and isinstance(da_or_series, xr.DataArray):
         # Convert DataArray to pandas Series
         series = da_or_series.to_series()
     elif isinstance(da_or_series, pd.Series):
@@ -929,7 +934,7 @@ def extract_annual_spei(
         "environment": {
             "python_version": sys.version,
             "platform": platform.platform(),
-            "xarray_version": xr.__version__,
+            "xarray_version": xr.__version__ if xr is not None else "not installed",
             "pandas_version": pd.__version__,
             "numpy_version": np.__version__,
         },

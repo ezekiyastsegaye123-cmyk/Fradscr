@@ -266,9 +266,9 @@ with st.sidebar:
             "Temperature Scaling (T)",
             min_value=0.10,
             max_value=1.50,
-            value=0.35,
+            value=0.15,
             step=0.05,
-            help="Optimal temperature T=0.35 resolves majority-class collapse and sharpens multi-class probabilities."
+            help="Optimal temperature T=0.15 resolves majority-class collapse and sharpens multi-class probabilities for high confidence."
         )
         st.caption("Active Model: **Calibrated Multi-Site Random Forest (20 Features)**")
         st.caption("Validation Holdout Accuracy: **85.85%**")

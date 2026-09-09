@@ -194,3 +194,107 @@ class TestModel1TrainingAndArtifact:
         assert "ETH007" in data["selected_dataset"]
         assert data["feature_count"] == 20
         assert data["hyperparameters"]["n_estimators"] == 350
+
+
+class TestRecommendationsImplementation:
+    """Automated tests for all four implemented engineering recommendations."""
+
+    @pytest.fixture(scope="class")
+    def dataset_and_split(self, project_root):
+        df_rwl = process_rwl(project_root / "africa" / "eth007.rwl")
+        chron_df = df_rwl.groupby("year")[["rwi"]].mean().reset_index()
+
+        df_sun = pd.read_csv(project_root / "SN_y_tot_V2.0.csv", sep=";", header=None, usecols=[0, 1])
+        df_sun.columns = ["year_dec", "sunspot"]
+        df_sun["year"] = df_sun["year_dec"].astype(int)
+        df_sun = df_sun.dropna(subset=["year", "sunspot"]).drop_duplicates("year").sort_values("year").reset_index(drop=True)
+
+        ocean_path = project_root / "data" / "ocean_indices_annual.csv"
+        df_ocean = pd.read_csv(ocean_path) if ocean_path.exists() else None
+        df_spei = pd.read_csv(project_root / "results" / "spei_gondar.csv")
+
+        engineer = DroughtFeatureEngineer()
+        df_chron = engineer.build_tree_ring_chronology(chron_df)
+        df_solar = engineer.build_solar_feature_table(df_sun)
+        df_data = engineer.build_training_dataset(df_chron, df_solar, df_spei, df_ocean=df_ocean)
+        df_data["target_3class"] = [classify_spei_calibrated_3class(s) for s in df_data["spei"]]
+
+        n_train = int(len(df_data) * 0.80)
+        df_train = df_data.iloc[:n_train]
+        df_test = df_data.iloc[n_train:]
+
+        X_train = df_train[DroughtFeatureEngineer.FEATURE_NAMES].values
+        y_train = df_train["target_3class"].values
+        spei_train = df_train["spei"].values
+
+        X_test = df_test[DroughtFeatureEngineer.FEATURE_NAMES].values
+        y_test = df_test["target_3class"].values
+        spei_test = df_test["spei"].values
+
+        return {
+            "engineer": engineer,
+            "df_solar": df_solar,
+            "df_ocean": df_ocean,
+            "X_train": X_train,
+            "y_train": y_train,
+            "spei_train": spei_train,
+            "X_test": X_test,
+            "y_test": y_test,
+            "spei_test": spei_test,
+        }
+
+    def test_rec1_class_weight_balancing_breaks_majority_collapse(self, dataset_and_split):
+        data = dataset_and_split
+        clf_bal = RandomForestClassifier(n_estimators=350, max_depth=7, max_features="log2", class_weight="balanced", random_state=42)
+        clf_bal.fit(data["X_train"], data["y_train"])
+        preds = clf_bal.predict(data["X_test"])
+
+        from sklearn.metrics import recall_score
+        c2_recall = recall_score(data["y_test"] == 2, preds == 2, zero_division=0)
+        assert c2_recall > 0.0, "Balanced Random Forest should produce > 0% recall on Class 2"
+
+    def test_rec2_temperature_scaling_preserves_ranking_and_sharpens(self, dataset_and_split):
+        data = dataset_and_split
+        clf_bal = RandomForestClassifier(n_estimators=350, max_depth=7, max_features="log2", class_weight="balanced", random_state=42)
+        clf_bal.fit(data["X_train"], data["y_train"])
+        raw_probs = clf_bal.predict_proba(data["X_test"])
+
+        def temp_scale(probs, T=0.35):
+            eps = 1e-7
+            logits = np.log(np.clip(probs, eps, 1.0 - eps))
+            scaled = logits / T
+            return np.exp(scaled) / np.sum(np.exp(scaled), axis=1, keepdims=True)
+
+        raw_pred = np.argmax(raw_probs, axis=1)
+        cal_probs_035 = temp_scale(raw_probs, T=0.35)
+        cal_pred_035 = np.argmax(cal_probs_035, axis=1)
+
+        # Monotonic scaling must not permute class decisions
+        assert np.array_equal(raw_pred, cal_pred_035)
+
+        # Temperature scaling must strictly sharpen confidence
+        assert cal_probs_035.max(axis=1).mean() > raw_probs.max(axis=1).mean()
+
+    def test_rec3_geographic_holdout_sites_evaluable(self, project_root, dataset_and_split):
+        data = dataset_and_split
+        clf = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+        clf.fit(data["X_train"], data["y_train"])
+
+        # Test ETH001 holdout pipeline
+        df_rwl_001 = process_rwl(project_root / "africa" / "eth001.rwl")
+        chron_001 = df_rwl_001.groupby("year")[["rwi"]].mean().reset_index()
+        df_chron_001 = data["engineer"].build_tree_ring_chronology(chron_001)
+        df_spei_deb = pd.read_csv(project_root / "results" / "spei_debrebirkan.csv")
+        df_holdout_001 = data["engineer"].build_training_dataset(df_chron_001, data["df_solar"], df_spei_deb, df_ocean=data["df_ocean"])
+        assert len(df_holdout_001) >= 100
+        preds_001 = clf.predict(df_holdout_001[DroughtFeatureEngineer.FEATURE_NAMES].values)
+        assert len(preds_001) == len(df_holdout_001)
+
+    def test_rec4_continuous_spei_regression(self, dataset_and_split):
+        data = dataset_and_split
+        from sklearn.ensemble import RandomForestRegressor
+        reg = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
+        reg.fit(data["X_train"], data["spei_train"])
+        preds = reg.predict(data["X_test"])
+        assert len(preds) == len(data["X_test"])
+        assert isinstance(preds[0], float) or isinstance(preds[0], np.floating)

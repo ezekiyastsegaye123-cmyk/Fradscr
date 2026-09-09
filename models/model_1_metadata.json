@@ -1,0 +1,61 @@
+{
+  "model_name": "Random Forest Model-1",
+  "selected_dataset": "ETH007 (Gondar)",
+  "site": "Gondar, Ethiopia",
+  "coordinates": {
+    "latitude": 13.01,
+    "longitude": 37.8,
+    "elevation_m": 2471.0
+  },
+  "species": "Juniperus procera Hochst. ex Endl.",
+  "n_total_observations": 114,
+  "training_observations": 91,
+  "testing_observations": 23,
+  "training_percentage": 0.7982,
+  "testing_percentage": 0.2018,
+  "training_period": "1901-1991",
+  "testing_period": "1992-2014",
+  "feature_names": [
+    "sunspot",
+    "sunspot_lag1",
+    "sunspot_lag2",
+    "sunspot_lag3",
+    "sunspot_lag4",
+    "sunspot_lag5",
+    "sunspot_smooth11",
+    "sunspot_diff1",
+    "sunspot_diff3",
+    "solar_phase",
+    "solar_phase_sin",
+    "solar_phase_cos",
+    "rwi",
+    "rwi_lag1",
+    "rwi_diff1",
+    "rwi_smooth5",
+    "nino34_mean",
+    "dmi_mean",
+    "d13c",
+    "iwue"
+  ],
+  "feature_count": 20,
+  "target_definition": {
+    "class_0": "Normal / Wet (SPEI > -0.10)",
+    "class_1": "Moderate Drought (-0.35 < SPEI <= -0.10)",
+    "class_2": "Severe Drought (SPEI <= -0.35)"
+  },
+  "hyperparameters": {
+    "n_estimators": 350,
+    "max_depth": 7,
+    "max_features": "log2",
+    "random_state": 42
+  },
+  "evaluation_metrics": {
+    "test_accuracy": 0.3913,
+    "test_balanced_accuracy": 0.3333,
+    "test_macro_f1": 0.1935,
+    "test_weighted_f1": 0.2272,
+    "oob_score": 0.6264,
+    "mean_max_probability": 0.6675
+  },
+  "model_path": "models/random_forest_model_1.joblib"
+}

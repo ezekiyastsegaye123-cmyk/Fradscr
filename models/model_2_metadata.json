@@ -1,0 +1,46 @@
+{
+  "model_name": "Model-2 Tabular SoTA Multi-Site Ensemble",
+  "architecture": "Soft-Voting Blended Stacking (65% RF + 35% XGBoost) with T=0.35 Softmax Calibration",
+  "training_sites": [
+    "eth002",
+    "eth003",
+    "eth004",
+    "eth005",
+    "eth006",
+    "eth007"
+  ],
+  "training_span": [
+    1901,
+    2014
+  ],
+  "n_training_samples": 114,
+  "feature_names": [
+    "sunspot",
+    "sunspot_lag1",
+    "sunspot_lag2",
+    "sunspot_lag3",
+    "sunspot_lag4",
+    "sunspot_lag5",
+    "sunspot_smooth11",
+    "sunspot_diff1",
+    "sunspot_diff3",
+    "solar_phase",
+    "solar_phase_sin",
+    "solar_phase_cos",
+    "rwi",
+    "rwi_lag1",
+    "rwi_diff1",
+    "rwi_smooth5",
+    "nino34_mean",
+    "dmi_mean",
+    "d13c",
+    "iwue"
+  ],
+  "primary_holdout_site": "eth001 (Debrebirkan Selassie)",
+  "primary_holdout_accuracy": 0.5566037735849056,
+  "severe_drought_detection_accuracy": 0.8018867924528302,
+  "normal_year_accuracy": 0.7538461538461538,
+  "optimal_deployment_threshold": 7.622890279857227e-05,
+  "optimal_prescriptive_score": -260.0,
+  "famine_recall": 1.0
+}

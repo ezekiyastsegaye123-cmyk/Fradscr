@@ -1,6 +1,7 @@
 {
   "model_name": "Model-2 Tabular SoTA Multi-Site Ensemble",
   "architecture": "Soft-Voting Blended Stacking (65% RF + 35% XGBoost) with T=0.35 Softmax Calibration",
+  "transfer_learning": "Multi-Site Regional Master Representation to Cross-Basin Isolated Holdouts (eth001 Debrebirkan & eth004 Adaba-Dodola)",
   "training_sites": [
     "eth002",
     "eth003",

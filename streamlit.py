@@ -45,7 +45,15 @@ else:
             code = compile(f.read(), str(app_file), "exec")
             exec(code, globals())
     else:
-        # Executed as `python streamlit.py`
+        # Executed as `python streamlit.py` (optional args: 1 for Model-1, 2 for Model-2)
         import subprocess
-        app_path = PROJECT_ROOT / "streamlit_app.py"
-        subprocess.run(["streamlit", "run", str(app_path)] + sys.argv[1:])
+        if len(sys.argv) > 1 and sys.argv[1] == "1":
+            app_path = PROJECT_ROOT / "app_model_1.py"
+            extra_args = sys.argv[2:]
+        elif len(sys.argv) > 1 and sys.argv[1] == "2":
+            app_path = PROJECT_ROOT / "app_model_2.py"
+            extra_args = sys.argv[2:]
+        else:
+            app_path = PROJECT_ROOT / "streamlit_app.py"
+            extra_args = sys.argv[1:]
+        subprocess.run(["streamlit", "run", str(app_path)] + extra_args)

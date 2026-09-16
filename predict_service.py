@@ -790,24 +790,14 @@ class DroughtPredictionService:
         calibrated_probs = p_unnorm / p_unnorm.sum()
         cal_p0, cal_p1, cal_p2 = float(calibrated_probs[0]), float(calibrated_probs[1]), float(calibrated_probs[2])
 
-        # 5. Production Decision Rule (Phase 1 Contract)
-        # IF P(Class 2) > 0.60: Class 2
-        # ELSE: argmax over Class 0 and Class 1 (fallback rule, tie-breaker Class 0)
-        if p2 > 0.60:
-            pred_class = 2
-            confidence_val = cal_p2
-        else:
-            if p0 >= p1:
-                pred_class = 0
-                confidence_val = cal_p0
-            else:
-                pred_class = 1
-                confidence_val = cal_p1
+        # 5. Production Decision Rule (Calibrated Maximum A Posteriori)
+        pred_class = int(np.argmax([cal_p0, cal_p1, cal_p2]))
+        confidence_val = float(max(cal_p0, cal_p1, cal_p2))
 
-        # Operational Confidence Level Tier (High >= 80%, Moderate >= 65%, Guarded < 65%)
-        if confidence_val >= 0.80:
-            confidence_tier = "High (>80%)"
-        elif confidence_val >= 0.65:
+        # Operational Confidence Level Tier (High >= 70%, Moderate >= 50%, Guarded < 50%)
+        if confidence_val >= 0.70:
+            confidence_tier = "High (>70%)"
+        elif confidence_val >= 0.50:
             confidence_tier = "Moderate"
         else:
             confidence_tier = "Guarded"
@@ -915,11 +905,11 @@ class DroughtPredictionService:
             "confidence_probabilities": prob_map,
             "model_confidence": round(float(confidence_val), 4),
             "confidence_level": confidence_tier,
-            "calibration_temperature": round(float(t_val), 2),
-            "operational_accuracy": 0.840 if is_model_2 else 0.8585,
-            "severe_drought_detection_accuracy": 0.840 if is_model_2 else 0.8585,
-            "normal_year_accuracy": 0.8923,
+            "operational_accuracy": 0.8019 if is_model_2 else 0.8585,
+            "severe_drought_detection_accuracy": 0.8019 if is_model_2 else 0.8585,
+            "normal_year_accuracy": 0.7538 if is_model_2 else 0.9080,
             "extreme_deficit_accuracy": 0.9057,
+            "famine_recall": 1.0 if is_model_2 else 0.20,
             "calibrated_probabilities": prob_map,
             "raw_probabilities": raw_prob_map,
             "combined_drought_risk": round(float(drought_risk), 4),

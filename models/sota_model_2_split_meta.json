@@ -1,0 +1,33 @@
+{
+  "format": "split_v2",
+  "rf_file": "sota_model_2_rf.joblib",
+  "xgb_file": "sota_model_2_xgb.json",
+  "rf_weight": 0.65,
+  "xgb_weight": 0.35,
+  "temperature": 0.35,
+  "feature_names": [
+    "sunspot",
+    "sunspot_lag1",
+    "sunspot_lag2",
+    "sunspot_lag3",
+    "sunspot_lag4",
+    "sunspot_lag5",
+    "sunspot_smooth11",
+    "sunspot_diff1",
+    "sunspot_diff3",
+    "solar_phase",
+    "solar_phase_sin",
+    "solar_phase_cos",
+    "rwi",
+    "rwi_lag1",
+    "rwi_diff1",
+    "rwi_smooth5",
+    "nino34_mean",
+    "dmi_mean",
+    "d13c",
+    "iwue"
+  ],
+  "n_classes": 3,
+  "optimal_prescriptive_threshold": 7.622890279857227e-05,
+  "optimal_prescriptive_score": -260.0
+}

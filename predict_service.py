@@ -314,6 +314,101 @@ class DroughtPredictionService:
                 cls._instance = inst
         return cls._instances[key]
 
+    def _load_model_cascade(self, model_path: Path):
+        """
+        3-stage model loading cascade — handles version mismatches gracefully.
+
+        Stage 1 (split format): RF joblib + XGB native JSON. Version-independent.
+            Looks for sota_model_2_rf.joblib + sota_model_2_xgb.json + sota_model_2_split_meta.json
+            alongside the requested model_path, or in the same models/ directory.
+
+        Stage 2 (legacy monolithic): joblib.load() of a single .joblib dict.
+            Works when saved and loaded with the same sklearn/xgboost versions.
+
+        Stage 3 (eth007 fallback): Load the baseline Random Forest if all else fails.
+            Provides degraded-but-functional service so the app never hard-crashes.
+        """
+        models_dir = model_path.parent
+
+        # ── Stage 1: Version-safe split format ────────────────────────────────
+        is_targeting_model_2 = ("model_2" in model_path.name.lower()) or (model_path == DEFAULT_MODEL_PATH)
+        split_meta_path = models_dir / "sota_model_2_split_meta.json"
+        rf_path  = models_dir / "sota_model_2_rf.joblib"
+        xgb_path = models_dir / "sota_model_2_xgb.json"
+
+        if is_targeting_model_2 and split_meta_path.exists() and rf_path.exists() and xgb_path.exists():
+            try:
+                logger.info("Loading Model-2 via split format (RF joblib + XGB JSON) from: %s", models_dir)
+                with open(split_meta_path) as f:
+                    meta = json.load(f)
+
+                rf_model = joblib.load(rf_path)
+
+                # XGBoost native JSON — no pickle, fully version-independent
+                from xgboost import XGBClassifier
+                xgb_model = XGBClassifier()
+                xgb_model.load_model(str(xgb_path))
+
+                model = Model2Ensemble(
+                    rf_model=rf_model,
+                    xgb_model=xgb_model,
+                    rf_weight=meta.get("rf_weight", 0.65),
+                    temperature=meta.get("temperature", 0.35),
+                    optimal_threshold=meta.get("optimal_prescriptive_threshold", 7.62e-05),
+                    optimal_score=meta.get("optimal_prescriptive_score"),
+                    feature_names=meta.get("feature_names"),
+                )
+                logger.info(
+                    "✅ Stage 1 (split format) loaded: rf_weight=%.2f, xgb_weight=%.2f, θ*=%.4f",
+                    model.rf_weight, model.xgb_weight, model.optimal_threshold,
+                )
+                return model
+            except Exception as e1:
+                logger.warning("Stage 1 (split format) failed: %s — trying Stage 2 (legacy joblib).", e1)
+
+        # ── Stage 2: Legacy monolithic joblib (same-version environments) ─────
+        if model_path.exists():
+            try:
+                logger.info("Loading model via legacy joblib from: %s", model_path)
+                loaded = joblib.load(model_path)
+                if isinstance(loaded, dict) and "rf_model" in loaded and "xgb_model" in loaded:
+                    model = Model2Ensemble(
+                        rf_model=loaded["rf_model"],
+                        xgb_model=loaded["xgb_model"],
+                        rf_weight=loaded.get("rf_weight", 0.65),
+                        temperature=loaded.get("temperature", 0.35),
+                        optimal_threshold=loaded.get("optimal_prescriptive_threshold", 0.0002),
+                        optimal_score=loaded.get("optimal_prescriptive_score"),
+                        feature_names=loaded.get("feature_names"),
+                    )
+                    logger.info(
+                        "✅ Stage 2 (legacy joblib) loaded: rf_weight=%.2f, xgb_weight=%.2f, threshold=%.4f",
+                        model.rf_weight, model.xgb_weight, model.optimal_threshold,
+                    )
+                    return model
+                elif hasattr(loaded, "predict"):
+                    logger.info("✅ Stage 2 loaded plain estimator from: %s", model_path)
+                    return loaded
+            except Exception as e2:
+                logger.warning("Stage 2 (legacy joblib) failed: %s — trying Stage 3 (eth007 fallback).", e2)
+
+        # ── Stage 3: eth007 baseline fallback ─────────────────────────────────
+        if DEFAULT_ETH007_MODEL_PATH.exists():
+            logger.warning(
+                "⚠️  Stage 3 fallback: loading eth007 baseline RF from %s. "
+                "Model-2 artifact unavailable — service degraded but functional.",
+                DEFAULT_ETH007_MODEL_PATH,
+            )
+            fallback = joblib.load(DEFAULT_ETH007_MODEL_PATH)
+            if hasattr(fallback, "predict"):
+                return fallback
+
+        raise ModelNotFoundError(
+            f"All 3 loading stages failed for {model_path}. "
+            "Ensure sota_model_2_rf.joblib, sota_model_2_xgb.json, and "
+            "sota_model_2_split_meta.json exist in the models/ directory."
+        )
+
     def initialize(self) -> None:
         """Load heavy model and scientific datasets ONCE into memory."""
         if self._initialized:
@@ -340,32 +435,7 @@ class DroughtPredictionService:
             )
 
         try:
-            loaded = joblib.load(self.model_path)
-            if isinstance(loaded, dict) and "rf_model" in loaded and "xgb_model" in loaded:
-                self._model = Model2Ensemble(
-                    rf_model=loaded["rf_model"],
-                    xgb_model=loaded["xgb_model"],
-                    rf_weight=loaded.get("rf_weight", 0.65),
-                    temperature=loaded.get("temperature", 0.35),
-                    optimal_threshold=loaded.get("optimal_prescriptive_threshold", 0.0002),
-                    optimal_score=loaded.get("optimal_prescriptive_score"),
-                    feature_names=loaded.get("feature_names"),
-                )
-                logger.info(
-                    "Successfully loaded Model-2 Ensemble artifact (rf_weight=%.2f, xgb_weight=%.2f, threshold=%.4f)",
-                    self._model.rf_weight,
-                    self._model.xgb_weight,
-                    self._model.optimal_threshold,
-                )
-            elif hasattr(loaded, "predict"):
-                self._model = loaded
-                logger.info(
-                    "Successfully loaded Random Forest model (classes=%s, features=%d)",
-                    list(self._model.classes_),
-                    getattr(self._model, "n_features_in_", -1),
-                )
-            else:
-                raise ModelNotFoundError(f"Object loaded from {self.model_path} is not a valid estimator.")
+            self._model = self._load_model_cascade(self.model_path)
         except Exception as exc:
             logger.error("Failed to load model from %s: %s", self.model_path, exc)
             raise ModelNotFoundError(f"Cannot load model from {self.model_path}: {exc}") from exc

@@ -1,9 +1,9 @@
-# Tree-Ring Detrending Pipeline
+# FRADSCR — Tree-Ring Paleoclimatology & Solar Teleconnection AI
 
-A production-ready Python pipeline for reading raw tree-ring width measurements
-from standard Tucson-format `.rwl` files, performing biological detrending using
-a negative exponential growth model, and calculating standardized Ring Width
-Index (RWI).
+[![Open Model-2 in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ezekiyastsegaye123-cmyk/Fradscr/blob/main/model-2.ipynb)
+[![Open Model-1 in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ezekiyastsegaye123-cmyk/Fradscr/blob/main/model-1.ipynb)
+
+A production-ready machine learning framework and Streamlit advisory system for predicting decadal groundwater deficits and optimizing solar water pump dispatch across the Horn of Africa using tree-ring chronologies, SILSO solar teleconnections, and reinforcement learning.
 
 ## Installation
 

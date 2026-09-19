@@ -277,235 +277,64 @@ tests/
 ├── test_pipeline.py
 ├── test_rwi.py
 └── test_solar_lag.py
+```
 
-## FRADSCR — Solar Groundwater Pump Drought Warning System
+### FRADSCR — Streamlit Early Warning & Solar Borehole Advisory System
 
-**FRADSCR** is a production web interface and real-time backend API built for low-bandwidth cellular networks in the **Borana Zone, Oromia, Ethiopia**. It links regional tree-ring climate memory (*Juniperus procera*) and solar cycle teleconnections directly to community water point operators and solar-powered borehole pumps.
+**FRADSCR** is an interactive scientific application built with **Streamlit** for drought forecasting and solar groundwater advisory across the **Borana Zone, Oromia, Ethiopia**. It links regional tree-ring climate memory (*Juniperus procera*) and solar cycle teleconnections directly to community water point operators and solar-powered borehole pumps.
 
-### Target Architecture
+### Architecture
 
 ```text
-Browser (Mobile / Desktop)
+User / Field Operator Browser
+             │
+             │ HTTPS / WebSocket
+             ▼
+Streamlit Application Hub (streamlit_app.py)
    │
-   │ HTTPS / WebSocket (Socket.io)
-   ▼
-Node.js (Express 5 + Socket.io 4)
+   ├── Model-2: SoTA Regional Ensemble & Prescriptive RL (app_model_2.py)
+   │     ├── Pan-Ethiopian RCS Master Chronology (eth002 to eth007)
+   │     ├── Stacking Ensemble (Random Forest + XGBoost)
+   │     ├── Softmax Calibration (T = 0.35)
+   │     └── WaterPumpAgent (Prescriptive RL Dispatch)
    │
-   ├── Security Headers (Helmet) & Explicit CORS
-   ├── Zod Schema Input Validation (Bounds, types, no injection)
-   ├── Rate Limiting & Concurrency Control (Max 3 concurrent ML jobs)
-   ├── MongoDB / Mongoose Audit Logging (QueryLog model)
+   ├── Model-1: Single-Site Gondar Baseline (app_model_1.py)
    │
-   └── Python ML Engine Integration (predict_service.py)
-          │
-          │ Local child_process.spawn (shell: false, argv array)
-          ▼
-     Random Forest Ensemble (Gondar eth007 + SILSO + NetCDF SPEI)
-          │
-          ▼
-     Calibrated 3-Class Drought Output & Probabilities
+   └── In-Memory Scientific ML Engine (predict_service.py)
 ```
 
-### Key Capabilities
-- **Multi-Language Support**: Complete vanilla JavaScript localization in **English**, **Afaan Oromoo** (primary local language of Borana), and **Amharic** (አማርኛ).
-- **Zero Framework CDN Overhead**: Pure semantic HTML5, responsive CSS (<12 KB), and vanilla JS. Socket.io is served directly from the backend with zero external CDN dependencies.
-- **Borana Zone Presets & Geolocation**: Instant one-tap selection of major pastoral borehole clusters (Yabelo, Dubuluk, Mega, Moyale) or native HTML5 GPS location.
-- **Accessible Drought Alert Gauge**: Displays color + icon + explicit bold text (Normal, Moderate Drought, Severe Drought) with pump operation advisories for pastoral herds.
-- **Security & Integrity**: Non-shell process invocation (`shell: false`), strict Zod validation at both input and output boundaries, per-socket throttling, and graceful DB failure handling.
+### Running the Streamlit Application
 
-### Installation & Quickstart
-
-#### 1. Backend Setup
 ```bash
-# Install Node.js dependencies
-npm install
+# Launch master dual-model hub
+streamlit run streamlit_app.py
 
-# Copy environment template
-cp .env.example .env
+# Or run Model-2 directly
+streamlit run app_model_2.py
+
+# Or run Model-1 directly
+streamlit run app_model_1.py
 ```
 
-#### 2. Configure Environment (`.env`)
-| Variable | Default | Description |
-| :--- | :--- | :--- |
-| `PORT` | `3000` | Port for Express & Socket.io server |
-| `MONGODB_URI` | `mongodb://127.0.0.1:27017/fradscr` | MongoDB connection string for QueryLog |
-| `PYTHON_EXECUTABLE` | `./venv/bin/python` | Path to Python 3.10+ venv binary |
-| `ML_SERVICE_PATH` | `./predict_service.py` | Path to prediction service script |
-| `ML_TIMEOUT_MS` | `45000` | Execution timeout for Python subprocess |
-| `MAX_CONCURRENT_ML_JOBS`| `3` | Maximum concurrent Python ML processes |
-| `DEFAULT_YEAR` | `2026` | Default operational projection year |
-| `CORS_ORIGIN` | `*` | Allowed CORS origins |
+### Production Docker Deployment
 
-#### 3. Run Server
 ```bash
-# Start production server
-npm start
-
-# Or with live logs in development
-npm run dev
+# Build and run the Streamlit container
+docker compose up -d --build
+# Or run directly via Docker
+docker build -t fradscr-streamlit .
+docker run -p 8501:8501 fradscr-streamlit
 ```
-
-Visit `http://localhost:3000` in any browser or mobile device.
-
-### API Endpoints
-
-#### Health Check
-```bash
-curl http://localhost:3000/health
-```
-Returns system status, uptime, database connection state, and ML engine availability without leaking credentials.
-
-#### REST Drought Prediction
-```bash
-curl -X POST http://localhost:3000/api/predict \
-  -H "Content-Type: application/json" \
-  -d '{"latitude": 4.88, "longitude": 38.08, "year": 2026}'
-```
-
-#### Socket.io Real-Time Protocol
-- **Request event**: `drought:predict` with `{ latitude: 4.88, longitude: 38.08, year: 2026 }`
-- **Status event**: `drought:status`
-- **Result event**: `drought:prediction_result` (emitted strictly to requesting socket)
-- **Error event**: `drought:prediction_error`
 
 ### Automated Testing
 
 ```bash
-# Run complete Jest test suite (81 tests across unit, integration, and security)
-npm test
-
-# Run Python ML test suite (151 tests)
-./venv/bin/pytest
+# Run complete Python test suite
+pytest -v
 ```
 
 ---
 
-## Production Docker & Reverse Proxy Deployment
-
-FRADSCR is fully containerized and reverse-proxied for high-availability production environments:
-
-### 1. Architectural Topology
-
-```text
-Public Internet (HTTPS :443 / HTTP :80)
-        │
-        ▼
-   Nginx Reverse Proxy (DDoS Rate Limiter, SSL/TLS, Gzip Compression)
-        │
-        ├── /.well-known/acme-challenge/ ──> Certbot (Let's Encrypt Auto-Renewal)
-        │
-        └── http://web-app:3000 (Internal Docker Bridge Network)
-                 │
-                 ├── WebSocket / REST API Gateway
-                 │
-                 ├── http://ml-service:8000 (FastAPI In-Memory ML Engine)
-                 └── mongodb:27017 (Audit Query Log)
-```
-
-### 2. Start Full Production Stack
-
-```bash
-# Build images and launch background services with reverse proxy
-docker compose up -d --build
-```
-
-This launches 5 coordinated services:
-- **`reverse-proxy`**: Nginx 1.25 edge server enforcing rate limiting (`10r/s`), Gzip compression for 2G/3G networks, and secure HTTP/WebSocket proxying (ports `80`, `443`).
-- **`web-app`**: Node.js Express 5 + Socket.io application gateway.
-- **`ml-service`**: Persistent in-memory FastAPI ML prediction service (isolated on `fradscr_internal` network).
-- **`mongodb`**: Audit & query logging store with volume persistence (`mongo_data`).
-- **`certbot`**: Automated Let's Encrypt SSL/TLS certificate renewal daemon.
-
-### 3. Verify System Health
-
-```bash
-# Check container status
-docker compose ps
-
-# Test edge proxy health endpoint
-curl http://localhost/health
-```
-
-### 4. Enable Custom Domain SSL/TLS
-
-1. Copy `nginx/conf.d/ssl.conf.template` to `nginx/conf.d/ssl.conf`.
-2. Replace `drought-warning.example.org` with your registered domain name.
-3. Request your initial certificate using certbot:
-   ```bash
-   docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d yourdomain.com
-   ```
-4. Reload Nginx:
-   ```bash
-   docker compose exec reverse-proxy nginx -s reload
-   ```
-
-### 5. Stop Stack
-
-```bash
-docker compose down
-```
-
----
-
-## Operator Field Feedback & Ground-Truth Reconciliation API
-
-FRADSCR incorporates a closed-loop field validation architecture connecting pastoral borehole operators and regional water bureaus across Borana Zone directly to the forecasting system:
-
-### 1. Endpoint Specification
-
-#### `POST /api/feedback`
-Submits real-time borehole water status and ground-truth drought observations.
-
-**Request Payload (`application/json`):**
-```json
-{
-  "location_name": "Dubuluk Well Cluster #02",
-  "latitude": 4.45,
-  "longitude": 38.28,
-  "observed_year": 2026,
-  "observed_condition": "severe_drought",
-  "borehole_yield_status": "reduced_yield",
-  "water_table_depth_meters": 45.2,
-  "notes": "Static water level dropped 3.2m; high pastoral livestock concentration.",
-  "submitted_by": "Borana Water Bureau / Op #4"
-}
-```
-
-**Field Validation & Constraints (Enforced via Zod):**
-- `location_name`: string (1–100 chars, trimmed, required)
-- `latitude`: float ($-90.0 \le \text{lat} \le 90.0$, required)
-- `longitude`: float ($-180.0 \le \text{lon} \le 180.0$, required)
-- `observed_year`: integer ($2000 \le \text{year} \le 2100$, required)
-- `observed_condition`: enum (`normal_wet`, `moderate_stress`, `severe_drought`, required)
-- `borehole_yield_status`: enum (`full_capacity`, `reduced_yield`, `dry_or_depleted`, required)
-- `water_table_depth_meters`: float ($0.0 \le \text{depth} \le 1000.0$, optional/nullable)
-- `submitted_by`: string (max 100 chars, optional)
-- `notes`: string (max 500 chars, optional)
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Borehole feedback logged successfully",
-  "feedbackId": "6a9b36e13cd41137511ef670"
-}
-```
-
-#### `GET /api/feedback`
-Queries logged ground-truth observations with pagination support.
-
-**Query Parameters:**
-- `limit`: number of records (default: 50, max: 100)
-- `skip`: pagination offset (default: 0)
-
-### 2. High-Availability Low-Bandwidth Fallback
-Pastoral zones in southern Ethiopia frequently experience sporadic cellular connectivity and intermittent database infrastructure. 
-If MongoDB is temporarily unavailable (`mongoose.connection.readyState !== 1`):
-- The feedback endpoint returns `200 OK` (`status: "accepted_ephemeral"`).
-- Feedback is written directly to the structured file system audit log.
-- Zero field reports are dropped or produce HTTP 500 errors for borehole operators.
-
----
 
 ## Satellite & Climatological Auxiliary Observation Ingestion
 

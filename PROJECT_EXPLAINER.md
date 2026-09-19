@@ -317,29 +317,23 @@ curl -X POST http://localhost:5000/predict -H "Content-Type: application/json" -
   - `Guarded Risk`: Combined risk between $0.20$ and $0.35$.
   - `Low Risk`: Combined risk $< 0.20$.
 
-### 6.1 Testing Locally via Web Application (FRADSCR UI)
+### 6.1 Testing Locally via Streamlit Dashboard
 
-A full-stack low-bandwidth web application is included to demonstrate the system to operational users, water engineers, and field technicians:
+The unified Streamlit application hosts both Model-2 (SoTA Multi-Site Ensemble & Prescriptive RL) and Model-1 (Baseline Prototype Stand):
 
 ```bash
-# 1. Start the persistent FastAPI prediction engine (port 8000)
-npm run ml:start
-# (or: ./venv/bin/python predict_service.py --serve --port 8000)
+# Launch the unified Streamlit application hub
+streamlit run streamlit_app.py
+# (or: python streamlit.py)
 
-# 2. In a separate terminal, start the Express & Socket.io server (port 3000)
-npm start
-# (or: node server.js)
-
-# 3. Open your browser and navigate to:
-http://localhost:3000
+# Or launch Model-2 directly:
+streamlit run app_model_2.py
 ```
 
-#### What the Web Interface Delivers:
-* **Real-Time Interactive Prediction**: Users click Borana well cluster presets (**Yabelo**, **Dubuluk**, **Mega**, **Moyale**) or input any Ethiopian coordinates and forecast year ($1700\text{--}2100$).
-* **Live Dual Metrics & Operational Risk Tiers**: Prominently renders both **Model Confidence ($91\%\text{--}95\%$)** and **Model Accuracy ($86\%$)**, paired with discrete humanitarian risk tiers (**Low Risk**, **Guarded Risk**, **Elevated Risk**, **High Risk**) and combined drought risk probabilities.
-* **Borehole Operator Field Feedback Loop**: Embedded ground-truth collection interface allowing water pump operators to log real-world borehole yield, static water levels, and drought conditions directly from the field. Includes low-connectivity fallback mode ensuring zero data loss during network degradation.
-* **Multilingual Localization**: Zero-latency switching between English (**EN**), Afaan Oromoo (**OM**), and Amharic (**AM**).
-* **Automated Browser Verification**: Includes automated end-to-end Chromium simulation via Puppeteer ([`tests/e2e-human-test.js`](file:///home/hezekiah/Documents/Egate_AIML/Fradscr/tests/e2e-human-test.js)), verifying UI state transitions, language toggles, and accuracy/confidence assertions ($>80\%$).
+#### What the Streamlit Interface Delivers:
+* **Dual-Model Hub**: Switch between Model-2 (SoTA Regional Ensemble & Prescriptive RL) and Model-1 (Gondar Baseline).
+* **Interactive Decadal Forecasting & Prescriptive RL**: Select pastoral borehole coordinates (e.g. Borana clusters: Yabelo, Dubuluk, Mega, Moyale) and forecast horizons, with dynamic water pump agent actions.
+* **Calibrated Predictions**: Features temperature-scaled probabilities, regional chronologies, and holdout validation visuals.
 
 ---
 
@@ -348,34 +342,23 @@ http://localhost:3000
 ```text
                                   PUBLIC INTERNET
                                          │
-                             [ HTTPS :443 / HTTP :80 ]
+                             [ HTTPS :443 / HTTP :8501 ]
                                          │
                                          ▼
            ┌───────────────────────────────────────────────────────────┐
-           │                   Nginx 1.25 Edge Proxy                   │
-           │  - SSL/TLS Termination (Certbot Auto-Renewal)             │
-           │  - Anti-DDoS Rate Limiting (10 req/s, Burst=20)           │
-           │  - Connection Limits (10 conn/IP)                         │
-           │  - High-Ratio Gzip Compression (2G/3G Pastoral Network)   │
-           │  - WebSocket Upgrade Gateway (/socket.io/)                │
+           │                  Streamlit Application                    │
+           │  - Multi-Site Regional Ensemble & Prescriptive RL Agent   │
+           │  - Interactive Borana Groundwater Advisory Dashboard      │
+           │  - Standalone In-Process Scientific ML Engine             │
            └─────────────────────────────┬─────────────────────────────┘
-                                         │ (Internal Bridge)
+                                         │
                                          ▼
            ┌───────────────────────────────────────────────────────────┐
-           │             Node.js Express 5 + Socket.io Server          │
-           │  - Strict Zod Input Validation & Coordinate Sanitization   │
-           │  - Multilingual Translation Pipeline (EN, OM, AM)         │
-           │  - Ground-Truth Operator Feedback Loop (/api/feedback)    │
-           │  - Offline / Ephemeral Logging Fallback                   │
-           └──────────────┬─────────────────────────────┬──────────────┘
-                          │                             │
-                          ▼                             ▼
-       ┌──────────────────────────────┐   ┌───────────────────────────┐
-       │   FastAPI In-Memory Engine   │   │       MongoDB 7.0         │
-       │   - 18-Feature Random Forest │   │   - Query & Audit Logs    │
-       │   - T=0.35 Softmax Calibrator│   │   - Borehole Observations │
-       │   - Zero-Leakage Holdout Run │   │   - Volume Persistence    │
-       └──────────────────────────────┘   └───────────────────────────┘
+           │               FastAPI ML Microservice (Optional)          │
+           │  - Persistent In-Memory Random Forest + XGBoost Engine    │
+           │  - T=0.35 Softmax Calibrator                              │
+           │  - Headless REST & CLI Inference Endpoints                │
+           └───────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -404,10 +387,9 @@ When presenting this work to an academic committee, technical panel, or governme
 Fradscr/
 ├── PROJECT_EXPLAINER.md          # Comprehensive explanation and presentation guide
 ├── README.md                     # Architecture, deployment guide, and API reference
-├── Dockerfile.ml                 # Python 3.11 slim container with preloaded ML weights
-├── Dockerfile.node               # Node.js 20 production container
-├── docker-compose.yml            # 5-service orchestration stack with healthchecks & networks
-├── nginx/                        # Nginx reverse proxy configurations & SSL templates
+├── Dockerfile                    # Streamlit production container
+├── Dockerfile.ml                 # Python 3.11 slim container with FastAPI ML engine
+├── docker-compose.yml            # Streamlit service orchestration stack
 ├── africa/
 │   ├── eth007.rwl                # Gondar tree-ring measurements (Training site, 1869–2014)
 │   └── eth001.rwl                # Debrebirkan Selassie tree rings (Holdout site, 1717–2006)
@@ -429,10 +411,6 @@ Fradscr/
 │   ├── processed_lagged_data.csv         # Standardized merged dataset (1874–2009)
 │   ├── lag_correlation_results.csv       # Pearson R and p-values for lags 0..5
 │   └── drought_forecast_2025_2035.csv    # 11-year forward operational forecast
-├── src/                          # Node.js backend modules
-│   ├── models/                   # Mongoose database schemas (OperatorFeedback, PredictionLog)
-│   ├── validation/               # Zod schemas (predictionInput, feedbackInput)
-│   └── services/                 # Express and ML communication services
 ├── treering/
 │   ├── parser.py                 # Tucson .rwl format decoder
 │   ├── model.py                  # Negative exponential biological growth curve fitter
@@ -443,8 +421,11 @@ Fradscr/
 │   ├── forecast.py               # Feature engineering, harmonics & forecaster
 │   └── holdout.py                # Geographic holdout evaluator & model exporter
 ├── predict_service.py            # Persistent FastAPI ML prediction service (Python, CLI, HTTP)
-├── server.js                     # Express + Socket.io web server for FRADSCR
-├── public/                       # Localized low-bandwidth frontend (HTML, CSS, JS)
-├── Model.ipynb                   # Complete 21-section interactive notebook
-└── tests/                        # 151 passing pytest + 86 passing Jest unit/integration tests
+├── streamlit_app.py              # Master Streamlit entrypoint and dual-model hub
+├── app_model_2.py                # Standalone Streamlit app for Model-2 SoTA Ensemble & Prescriptive RL
+├── app_model_1.py                # Standalone Streamlit app for Model-1 Prototype
+├── streamlit.py                  # CLI and execution wrapper for Streamlit
+├── model-1.ipynb                 # Model-1 baseline prototype interactive notebook
+├── model-2.ipynb                 # Model-2 SoTA multi-site ensemble interactive notebook
+└── tests/                        # 192 passing pytest test suite
 ```

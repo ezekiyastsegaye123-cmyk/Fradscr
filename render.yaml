@@ -1,30 +1,16 @@
 services:
-  # Unified Web Service (Express Frontend + FastAPI ML Engine in one container)
+  # Streamlit Advisory Application
   - type: web
     name: fradscr-drought-predictor
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: starter
-    region: frankfurt # Low latency to East Africa
+    region: frankfurt
     domains:
       - fradscr.pro.et
       - www.fradscr.pro.et
     envVars:
-      - key: NODE_ENV
-        value: production
       - key: PORT
-        value: 3000
-      - key: ML_SERVICE_URL
-        value: http://127.0.0.1:8000
-      - key: ML_REQUEST_TIMEOUT_MS
-        value: 15000
+        value: 8501
       - key: CALIBRATION_TEMPERATURE
         value: "0.35"
-      - key: CORS_ORIGIN
-        value: "https://fradscr.pro.et,https://www.fradscr.pro.et,*"
-      - key: RATE_LIMIT_WINDOW_MS
-        value: "60000"
-      - key: RATE_LIMIT_MAX_REQUESTS
-        value: "60"
-      - key: MONGODB_URI
-        sync: false # Set via Render dashboard or connect to MongoDB Atlas

@@ -28,3 +28,10 @@ copy_of_fradscr.csv
 Thumbs.db
 .vscode/
 .idea/
+
+# AI Agent skills & auxiliary tool repositories
+.agents/
+skillspector/
+
+# Automated MLOps run artifacts
+results/pipeline_runs/

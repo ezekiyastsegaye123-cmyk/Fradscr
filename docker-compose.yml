@@ -1,6 +1,26 @@
 services:
   # ----------------------------------------------------------------------------
-  # 1. Streamlit Application Service
+  # 1. FastAPI Microservice & 3D WebGL Digital Twin
+  # ----------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+    container_name: fradscr-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ----------------------------------------------------------------------------
+  # 2. Streamlit Application & Multi-Tab Dashboard
   # ----------------------------------------------------------------------------
   streamlit:
     build:
@@ -8,10 +28,13 @@ services:
       dockerfile: Dockerfile
     container_name: fradscr-streamlit
     restart: unless-stopped
+    depends_on:
+      - api
     ports:
       - "8501:8501"
     environment:
       - PORT=8501
+      - API_URL=http://api:8000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 20s

@@ -1,5 +1,22 @@
 services:
-  # Streamlit Advisory Application
+  # ----------------------------------------------------------------------------
+  # 1. 3D WebGL Digital Twin & FastAPI Microservice
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: fradscr-3d-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.ml
+    plan: starter
+    region: frankfurt
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: CALIBRATION_TEMPERATURE
+        value: "0.35"
+
+  # ----------------------------------------------------------------------------
+  # 2. Streamlit Advisory Application Hub
+  # ----------------------------------------------------------------------------
   - type: web
     name: fradscr-drought-predictor
     runtime: docker

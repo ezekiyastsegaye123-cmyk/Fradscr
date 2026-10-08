@@ -42,8 +42,8 @@ with st.sidebar:
     app_choice = st.radio(
         "Active Application Architecture",
         [
-            "🌟 Model-2: SoTA Regional Ensemble & Prescriptive RL (model-2.ipynb)",
-            "🌲 Model-1: Single-Site Gondar Baseline Prototype (model-1.ipynb)",
+            "Model-2: Regional Ensemble & Prescriptive RL (model-2.ipynb)",
+            "Model-1: Single-Site Gondar Baseline (model-1.ipynb)",
         ],
         index=0,
         help="Select which scientific model application to inspect and run."

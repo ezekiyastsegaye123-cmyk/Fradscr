@@ -64,7 +64,8 @@ class TestDataSplitAndLeakage:
     """Test chronological 80/20 split and temporal/target leakage."""
 
     @pytest.fixture(scope="class")
-    def dataset(self, project_root):
+    @classmethod
+    def dataset(cls, project_root):
         df_rwl = process_rwl(project_root / "africa" / "eth007.rwl")
         chron_df = df_rwl.groupby("year")[["rwi"]].mean().reset_index()
 
@@ -116,7 +117,8 @@ class TestModel1TrainingAndArtifact:
     """Test Model-1 training, predictions, feature importances, and serialization."""
 
     @pytest.fixture(scope="class")
-    def trained_artifacts(self, project_root):
+    @classmethod
+    def trained_artifacts(cls, project_root):
         df_rwl = process_rwl(project_root / "africa" / "eth007.rwl")
         chron_df = df_rwl.groupby("year")[["rwi"]].mean().reset_index()
 
@@ -200,7 +202,8 @@ class TestRecommendationsImplementation:
     """Automated tests for all four implemented engineering recommendations."""
 
     @pytest.fixture(scope="class")
-    def dataset_and_split(self, project_root):
+    @classmethod
+    def dataset_and_split(cls, project_root):
         df_rwl = process_rwl(project_root / "africa" / "eth007.rwl")
         chron_df = df_rwl.groupby("year")[["rwi"]].mean().reset_index()
 

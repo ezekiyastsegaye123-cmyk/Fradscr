@@ -329,11 +329,38 @@ docker run -p 8501:8501 fradscr-streamlit
 ### Automated Testing
 
 ```bash
-# Run complete Python test suite
+# Run complete Python test suite (221 tests)
 pytest -v
 ```
 
+### End-to-End MLOps Pipeline Runner
+
+FRADSCR features an enterprise-grade, DAG-based MLOps orchestrator that manages data validation, feature engineering, model training, operational gating, model registry, and canary smoke tests.
+
+```bash
+# Run the complete end-to-end MLOps pipeline
+python scripts/run_mlops_pipeline.py --all
+
+# Run specific isolated stages
+python scripts/run_mlops_pipeline.py --stage data_validation
+python scripts/run_mlops_pipeline.py --stage model_gating
+
+# Simulate pipeline stages (dry-run)
+python scripts/run_mlops_pipeline.py --dry-run
+
+# Inspect registered models and active champion
+python scripts/run_mlops_pipeline.py --list-models
+python scripts/run_mlops_pipeline.py --champion
+```
+
+#### Operational Deployment Gates (Quality Contract):
+- **Severe Drought Holdout Accuracy:** $\ge 80.0\%$ (Verified on unseen 106-year Debrebirkan holdout)
+- **Normal Year Identification:** $\ge 75.0\%$
+- **Prescriptive RL Famine Recall:** $\equiv 100.0\%$ (Zero catastrophic missed famines under asymmetric disaster loss)
+- **Brier Calibration Reliability Score:** $\le 0.35$
+
 ---
+
 
 
 ## Satellite & Climatological Auxiliary Observation Ingestion
@@ -378,5 +405,59 @@ In addition to physical tree-ring dendrochronology and Schwabe solar cycles, FRA
 3. **NASA SMAP L4 (Root-Zone Soil Moisture)**: $9\,\text{km}$ global soil moisture anomalies measuring deep aquifer replenishment potential.
 4. **NOAA PSL Oceanic Teleconnections**: Operational updates for El Niño–Southern Oscillation (Niño 3.4 index) and Indian Ocean Dipole (Dipole Mode Index - DMI).
 
+---
 
+## AI Copilot, Climate RAG & Early Warning Agent
 
+FRADSCR includes an enterprise-grade AI Copilot and Retrieval-Augmented Generation (RAG) system specialized in Horn of Africa hydroclimatology.
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                 FRADSCR AI Intelligence Tier                    │
+└─────────────────────────────────────────────────────────────────┘
+          │                                       │
+          ▼                                       ▼
+┌───────────────────────────────┐     ┌───────────────────────────┐
+│  AI Hydroclimatic Copilot     │     │  Climate Analogue RAG     │
+│  - Tool-Calling Orchestrator  │     │  - 1888–1892 Kifu Qen     │
+│  - Multi-Persona Generation   │     │  - 1913–1914 Nile Low Flow│
+│  - English, Amharic & Oromoo  │     │  - 1973–74, 1984–85, 2015 │
+└───────────────────────────────┘     └───────────────────────────┘
+          │                                       │
+          └───────────────────┬───────────────────┘
+                              │
+                              ▼
+               ┌─────────────────────────────┐
+               │    FastAPI Agent Endpoints  │
+               │  - POST /agent/advisory     │
+               │  - POST /agent/chat         │
+               │  - GET  /agent/analogues    │
+               └─────────────────────────────┘
+```
+
+### Agent Capabilities:
+1. **Interactive Conversational Copilot**: Responds to natural language questions about solar cycles, tree-ring carbohydrate memory, and multi-year drought risks with automated tool execution.
+2. **Climate Analogue Matching (RAG)**: Automatically maps forward model predictions to historic Ethiopian famine and drought milestones, providing proven operational lessons.
+3. **Multilingual Early Warning Bulletins**: Generates structured, downloadable advisory bulletins tailored for:
+   - **National Water Ministers & GERD Engineers**: Strategic reservoir carryover and anticipatory financing.
+   - **Pastoral Borehole Operators (Borana)**: Solar water pump duty cycle throttling and herd destocking.
+   - **Paleoclimatologists**: Heliophysical harmonic decomposition and $RWI$ proxy dynamics.
+   - Languages: **English**, **Amharic (አማርኛ)**, and **Afaan Oromoo**.
+4. **Zero-Dependency Fallback Engine**: Works 100% offline with zero external API keys required, while also supporting OpenAI or local Ollama when keys are configured.
+5. **Safety Guardrails**: Hardened against prompt injection, factual hallucinations, and geographic/temporal out-of-bounds parameters.
+
+---
+
+## 3D Heliophysics & Dendrochronology Digital Twin (WebGL)
+
+FRADSCR includes a high-end, real-time 3D WebGL digital twin designed according to the `premium-3d-website` architectural guidelines:
+
+* **Procedural GLSL Sun**: Custom vertex/fragment Simplex noise shaders modeling dynamic solar plasma granulation, coronal mass ejections, and the ~11-year Schwabe solar cycle activity pulse.
+* **Interactive 3D Earth & Ethiopian Basin**: High-fidelity globe featuring atmospheric Fresnel rim lighting and 3D telemetry markers for **Gondar (`eth007`)**, **Debrebirkan (`eth001`)**, and the **GERD Reservoir** on the Blue Nile.
+* **3D Dendrochronological Hologram**: 11 concentric growth layers modeling biological carbohydrate memory and ring-width suppression during historical droughts.
+* **Solar Wind Teleconnection Streams**: Curving Bezier particle pipelines illustrating solar irradiance modulating stratospheric ozone heating and ITCZ monsoon migrations.
+* **Post-Processing Pipeline**: `EffectComposer` with multi-pass `UnrealBloomPass`, ACESFilmic tone mapping, and DPR capped at `min(devicePixelRatio, 2)` for steady 60 FPS performance on Retina and mobile displays.
+
+### Accessing the 3D Experience:
+- **FastAPI Endpoint (Full Screen)**: Launch `python predict_service.py --serve` and open [`http://localhost:8000/3d`](http://localhost:8000/3d) or [`/experience`](http://localhost:8000/experience).
+- **Streamlit Interactive Tab**: Launch `streamlit run app_model_2.py` and navigate to **Tab 8: 🌐 3D Digital Twin Experience**.

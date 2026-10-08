@@ -31,6 +31,7 @@ COPY treering/ ./treering/
 COPY models/ ./models/
 COPY africa/ ./africa/
 COPY data/ ./data/
+COPY static/ ./static/
 COPY SN_y_tot_V2.0.csv .
 COPY predict_service.py .
 

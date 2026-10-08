@@ -157,14 +157,14 @@ with st.sidebar:
                            help="Model-1 uses T=0.15 for single-site probability sharpening.")
 
     st.markdown("---")
-    st.markdown("#### ⚖️ Architectural Details")
+    st.markdown("#### Architectural Details")
     st.caption("• **Model Type**: Random Forest Classifier (350 trees, max_depth=7)")
     st.caption("• **Chronology**: Single-stand Gondar `eth007.rwl` (N=114 yrs)")
     st.caption("• **Split**: 80% Train (1901-1991) / 20% Test (1992-2014)")
     st.caption("• **Threshold**: Static 50% cutoff (No Reinforcement Learning)")
 
     st.markdown("---")
-    st.info("💡 **Looking for the SoTA Model?**\nModel-2 with 6-site RCS master chronology and Prescriptive RL is in `app_model_2.py`.")
+    st.info("**Looking for the Regional Model?**\nModel-2 with 6-site RCS master chronology and Prescriptive RL is in `app_model_2.py`.")
 
 
 # Compute prediction
@@ -190,11 +190,11 @@ st.markdown("<div class=\"m1-sub-header\">Single-Stand Gondar Paleoclimate Recon
 # Pill badges
 b1, b2, b3, b4 = st.columns([1.8, 1.8, 1.8, 3.0])
 with b1:
-    st.markdown("<span class=\"pill-badge-selected\">🌲 ETH007 Gondar Stand</span>", unsafe_allow_html=True)
+    st.markdown("<span class=\"pill-badge-selected\">ETH007 Gondar Stand</span>", unsafe_allow_html=True)
 with b2:
-    st.markdown("<span class=\"pill-badge-m1\">📊 80/20 Chronological Split</span>", unsafe_allow_html=True)
+    st.markdown("<span class=\"pill-badge-m1\">80/20 Chronological Split</span>", unsafe_allow_html=True)
 with b3:
-    st.markdown("<span class=\"pill-badge-m1\">⚡ 350-Tree Bagging</span>", unsafe_allow_html=True)
+    st.markdown("<span class=\"pill-badge-m1\">350-Tree Bagging</span>", unsafe_allow_html=True)
 with b4:
     st.caption("Baseline Prototype: Single-Site Dendroclimatic Reconstruction")
 
@@ -202,11 +202,11 @@ st.markdown("---")
 
 # Navigation Tabs
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🌲 Candidate Selection & Quality Audit",
-    "🧪 Data Processing & 80/20 Split",
-    "💧 Operational Drought Warning",
-    "🔬 Scientific Evaluation & Limitations",
-    "📘 Model-1 Notebook Inspector",
+    "Candidate Selection & Quality Audit",
+    "Data Processing & 80/20 Split",
+    "Operational Drought Warning",
+    "Scientific Evaluation & Limitations",
+    "Model-1 Notebook Inspector",
 ])
 
 # ── TAB 1: Candidate Selection ───────────────────────────────────────────────
@@ -217,7 +217,7 @@ with tab1:
     df_cand = pd.DataFrame(CANDIDATES)
     st.dataframe(df_cand, hide_index=True, use_container_width=True)
 
-    st.markdown("#### 🏆 Why Was ETH007 Selected as the Primary Stand?")
+    st.markdown("#### Why Was ETH007 Selected as the Primary Stand?")
     qcol1, qcol2, qcol3 = st.columns(3)
     with qcol1:
         st.markdown("""

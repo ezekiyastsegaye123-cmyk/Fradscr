@@ -1,0 +1,107 @@
+{
+  "last_updated": "2026-09-26 06:31:42 UTC",
+  "models": {
+    "fradscr_rf_run_20260926_092442_be11d7": {
+      "model_id": "fradscr_rf_run_20260926_092442_be11d7",
+      "version": "2.1.0",
+      "artifact_path": "/home/hezekiah/Documents/Egate_AIML/Fradscr/models/random_forest_eth007.joblib",
+      "artifact_sha256": "9e8bd4f25ec0394a3330a7feb293c98cf21657c255b2ec0cc45428c499f29812",
+      "created_at": "2026-09-26 06:24:42 UTC",
+      "lifecycle_status": "archived",
+      "model_type": "RandomForest",
+      "metrics": {
+        "severe_drought_detection_accuracy": 0.8585,
+        "normal_year_accuracy": 0.8923,
+        "famine_recall": 1.0,
+        "brier_score": 0.22
+      },
+      "gating_decision": "DEPLOY_APPROVED",
+      "training_data_sources": [
+        "africa/eth007.rwl",
+        "SN_y_tot_V2.0.csv",
+        "data/spei01.nc"
+      ],
+      "hyperparameters": {
+        "n_estimators": 350,
+        "max_depth": 7,
+        "temperature": 0.35
+      },
+      "feature_names": [
+        "sunspot",
+        "rwi",
+        "solar_phase",
+        "nino34_mean",
+        "dmi_mean"
+      ],
+      "description": "Production model validated via automated MLOps gating pipeline."
+    },
+    "fradscr_rf_run_20260926_092630_00979d": {
+      "model_id": "fradscr_rf_run_20260926_092630_00979d",
+      "version": "2.1.0",
+      "artifact_path": "/home/hezekiah/Documents/Egate_AIML/Fradscr/models/random_forest_eth007.joblib",
+      "artifact_sha256": "9e8bd4f25ec0394a3330a7feb293c98cf21657c255b2ec0cc45428c499f29812",
+      "created_at": "2026-09-26 06:26:30 UTC",
+      "lifecycle_status": "archived",
+      "model_type": "RandomForest",
+      "metrics": {
+        "severe_drought_detection_accuracy": 0.8585,
+        "normal_year_accuracy": 0.8923,
+        "famine_recall": 1.0,
+        "brier_score": 0.22
+      },
+      "gating_decision": "DEPLOY_APPROVED",
+      "training_data_sources": [
+        "africa/eth007.rwl",
+        "SN_y_tot_V2.0.csv",
+        "data/spei01.nc"
+      ],
+      "hyperparameters": {
+        "n_estimators": 350,
+        "max_depth": 7,
+        "temperature": 0.35
+      },
+      "feature_names": [
+        "sunspot",
+        "rwi",
+        "solar_phase",
+        "nino34_mean",
+        "dmi_mean"
+      ],
+      "description": "Production model validated via automated MLOps gating pipeline."
+    },
+    "fradscr_rf_run_20260926_093142_961ff6": {
+      "model_id": "fradscr_rf_run_20260926_093142_961ff6",
+      "version": "2.1.0",
+      "artifact_path": "/home/hezekiah/Documents/Egate_AIML/Fradscr/models/random_forest_eth007.joblib",
+      "artifact_sha256": "9e8bd4f25ec0394a3330a7feb293c98cf21657c255b2ec0cc45428c499f29812",
+      "created_at": "2026-09-26 06:31:42 UTC",
+      "lifecycle_status": "champion",
+      "model_type": "RandomForest",
+      "metrics": {
+        "severe_drought_detection_accuracy": 0.8585,
+        "normal_year_accuracy": 0.8923,
+        "famine_recall": 1.0,
+        "brier_score": 0.22
+      },
+      "gating_decision": "DEPLOY_APPROVED",
+      "training_data_sources": [
+        "africa/eth007.rwl",
+        "SN_y_tot_V2.0.csv",
+        "data/spei01.nc"
+      ],
+      "hyperparameters": {
+        "n_estimators": 350,
+        "max_depth": 7,
+        "temperature": 0.35
+      },
+      "feature_names": [
+        "sunspot",
+        "rwi",
+        "solar_phase",
+        "nino34_mean",
+        "dmi_mean"
+      ],
+      "description": "Production model validated via automated MLOps gating pipeline."
+    }
+  }
+}

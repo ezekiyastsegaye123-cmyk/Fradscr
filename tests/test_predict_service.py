@@ -79,10 +79,19 @@ class TestPredictionServiceDomain:
 
 class TestFastAPIEndpoints:
     @pytest.fixture(scope="class")
-    def client(self):
+    @classmethod
+    def client(cls):
         """Initializes FastAPI client inside lifespan context."""
         with TestClient(app) as test_client:
             yield test_client
+
+    def test_root_endpoint(self, client):
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers.get("content-type", "")
+
+        resp_head = client.head("/")
+        assert resp_head.status_code == 200
 
     def test_health_liveness(self, client):
         resp = client.get("/health")

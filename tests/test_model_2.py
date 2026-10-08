@@ -87,7 +87,8 @@ class TestModel2HoldoutGeneralization:
     """Verifies out-of-sample spatial generalization on eth001 and eth004."""
 
     @pytest.fixture(scope="class")
-    def eth001_data(self, project_root):
+    @classmethod
+    def eth001_data(cls, project_root):
         df_001 = process_rwl(project_root / "africa" / "eth001.rwl")
         chron_001 = df_001.groupby("year")[["rwi"]].mean().reset_index()
 

@@ -80,7 +80,8 @@ import pandas as pd
 import xarray as xr
 from fastapi import FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sklearn.ensemble import RandomForestClassifier
 
@@ -205,6 +206,53 @@ class PredictionResponse(BaseModel):
     conformal_prediction_set: Optional[List[str]] = None
     biological_memory: Optional[Dict[str, Any]] = None
     hydrogeology: Optional[Dict[str, Any]] = None
+
+
+# ── AI Copilot & Agent Schemas ───────────────────────────────────────────────
+
+class AgentAdvisoryRequest(BaseModel):
+    """Request payload for structured early warning advisory report generation."""
+    latitude: float = Field(..., ge=-90.0, le=90.0, description="Latitude in decimal degrees")
+    longitude: float = Field(..., ge=-180.0, le=180.0, description="Longitude in decimal degrees")
+    year: int = Field(..., ge=1700, le=2100, description="Evaluation year")
+    persona: str = Field("minister", description="Target persona: 'minister', 'pastoralist', 'scientist'")
+    language: str = Field("en", description="Target language: 'en', 'am' (Amharic), 'om' (Afaan Oromoo)")
+
+
+class AgentAdvisoryResponse(BaseModel):
+    """Structured hydroclimatic early warning advisory response."""
+    year: int
+    persona: str
+    language: str
+    severity_label: str
+    predicted_drought_class: int
+    confidence: float
+    advisory_markdown: str
+    prescriptive_action: str
+    is_factually_consistent: bool
+    prediction: Optional[Dict[str, Any]] = None
+    analogues: Optional[List[Dict[str, Any]]] = None
+
+
+class AgentChatRequest(BaseModel):
+    """Interactive conversational copilot request payload."""
+    query: str = Field(..., min_length=1, max_length=4000, description="Natural language user query")
+    default_lat: float = Field(9.02, ge=-90.0, le=90.0, description="Fallback latitude")
+    default_lon: float = Field(38.74, ge=-180.0, le=180.0, description="Fallback longitude")
+    default_year: int = Field(2028, ge=1700, le=2100, description="Fallback year")
+
+
+class AgentChatResponse(BaseModel):
+    """Interactive conversational copilot response."""
+    reply: str
+    target_year: int
+    location: Dict[str, float]
+    prediction: Optional[Dict[str, Any]] = None
+    analogues: Optional[List[Dict[str, Any]]] = None
+    tools_used: List[str]
+    provider: str
+    flagged: Optional[bool] = False
+
 
 
 # =============================================================================
@@ -1025,6 +1073,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static web assets
+if Path("static").exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 # =============================================================================
 # Exception Handlers
@@ -1050,6 +1102,20 @@ async def handle_model_not_found(request: Request, exc: ModelNotFoundError):
 # =============================================================================
 # API Endpoints
 # =============================================================================
+
+@app.api_route(
+    "/",
+    methods=["GET", "HEAD"],
+    summary="Root Service Index & 3D Experience",
+    response_class=FileResponse,
+)
+async def root_index():
+    """Root endpoint: serves the interactive 3D digital twin or redirects to /docs."""
+    twin_path = Path("static/3d_twin.html")
+    if twin_path.exists():
+        return FileResponse(twin_path, media_type="text/html")
+    return RedirectResponse(url="/docs")
+
 
 @app.get("/health", summary="Service Liveness Check")
 async def health_check():
@@ -1159,6 +1225,114 @@ async def predict_post(request: Request, payload: PredictionRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Prediction service encountered an unexpected error.",
         )
+
+
+# =============================================================================
+# AI Copilot & Agent Endpoints
+# =============================================================================
+
+@app.post(
+    "/agent/advisory",
+    response_model=AgentAdvisoryResponse,
+    summary="Generate Structured Hydroclimatic Early Warning Advisory",
+)
+async def agent_advisory_post(request: Request, payload: AgentAdvisoryRequest):
+    """Generate persona- and language-tailored climatological early warning advisory."""
+    from treering.copilot import get_copilot_agent
+    copilot = get_copilot_agent()
+    try:
+        res = copilot.generate_advisory_report(
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            year=payload.year,
+            persona=payload.persona,
+            language=payload.language,
+        )
+        if "error" in res and res.get("error"):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=res["error"])
+        return res
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Agent advisory failure: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Agent advisory generation failed: {exc}",
+        )
+
+
+@app.post(
+    "/agent/chat",
+    response_model=AgentChatResponse,
+    summary="Interactive Conversational Hydroclimatic Copilot",
+)
+async def agent_chat_post(request: Request, payload: AgentChatRequest):
+    """Query the conversational hydroclimatologist copilot with tool calling."""
+    from treering.copilot import get_copilot_agent
+    copilot = get_copilot_agent()
+    try:
+        return copilot.answer_query(
+            query=payload.query,
+            default_lat=payload.default_lat,
+            default_lon=payload.default_lon,
+            default_year=payload.default_year,
+        )
+    except Exception as exc:
+        logger.exception("Agent chat failure: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Agent query failed: {exc}",
+        )
+
+
+@app.get(
+    "/agent/analogues",
+    summary="Retrieve Historical Climate Analogues",
+)
+async def agent_analogues_get(
+    predicted_class: int = Query(2, ge=0, le=2, description="Target drought class"),
+    year: int = Query(2028, ge=1700, le=2100, description="Evaluation year"),
+    continuous_spei: Optional[float] = Query(None, description="Optional observed continuous SPEI index"),
+    sunspot_count: Optional[float] = Query(None, description="Optional annual sunspot count"),
+    top_k: int = Query(3, ge=1, le=10, description="Number of historical analogues to return"),
+):
+    """Retrieve historical Ethiopian drought precedents from the RAG knowledge base."""
+    from treering.copilot import get_analogue_matcher
+    matcher = get_analogue_matcher()
+    return matcher.find_nearest_analogues(
+        predicted_class=predicted_class,
+        year=year,
+        continuous_spei=continuous_spei,
+        sunspot_count=sunspot_count,
+        top_k=top_k,
+    )
+
+
+@app.get(
+    "/3d",
+    summary="Interactive 3D Digital Twin Experience",
+    response_class=FileResponse,
+)
+async def three_d_digital_twin():
+    """Serve the full-screen interactive 3D WebGL Heliophysics & Dendrochronology digital twin."""
+    twin_path = Path("static/3d_twin.html")
+    if not twin_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="3D digital twin application asset not found.",
+        )
+    return FileResponse(twin_path, media_type="text/html")
+
+
+@app.get(
+    "/experience",
+    summary="Interactive 3D Digital Twin Experience (Alias)",
+    response_class=FileResponse,
+    include_in_schema=False,
+)
+async def three_d_experience_alias():
+    """Alias for /3d full-screen interactive experience."""
+    return await three_d_digital_twin()
 
 
 # =============================================================================
